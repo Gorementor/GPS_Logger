@@ -21,6 +21,7 @@ File LogFile;
 static const unsigned int ReportingInterval = 10000;   // Updateperiod (in millis)
 unsigned long LastReport = 0;             // Keep track of when we last sent data
 String Location = "";                 // Will build the Location string here
+String FileDate = "";					// String for naming the log file
 
 // Runs once when you power the board
 void setup()
@@ -53,9 +54,7 @@ void loop()
   if (millis() >= LastReport + ReportingInterval) 
   {
     LastReport = millis();  // Reset the timer
-    
-    if(Serial)
-    {
+
       Serial.print("\nTime: ");
       // TODO: check current timezone / central european summer time
       Serial.print(GPS.hour, DEC); 
@@ -75,12 +74,9 @@ void loop()
       Serial.print((int)GPS.fix);
       Serial.print(" quality: "); 
       Serial.println((int)GPS.fixquality);
-    }
     
     if (GPS.fix) 
     {
-      if (Serial)
-      {
         Serial.print("Location: ");
         Serial.print(GPS.latitude, 4); 
         Serial.print(GPS.lat);
@@ -100,15 +96,29 @@ void loop()
         Serial.println(GPS.altitude);
         Serial.print("Satellites: "); 
         Serial.println((int)GPS.satellites);
-      }
 
-      LogFile = SD.open("datalog.txt", FILE_WRITE);
-        // if ((LogFile) && (!Serial)) // only write to sd card when logfile exist and serial is not open / edison is not connected at home
+		if (0 == FileDate.length())
+		{
+			FileDate = String(GPS.year, DEC) + "_" + 
+				String(GPS.month, DEC) + "_" + 
+				String(GPS.day, DEC) + "-" + 
+				String(GPS.hour, DEC) + "_" + 
+				String(GPS.minute, DEC) + "_" + 
+				String(GPS.seconds, DEC) + "_datalog.txt";
+		}
+
+		// TODO: find simpler approach without initializing every loop turn
+		char *FileName = new char[FileDate.length() +1];
+		FileDate.toCharArray(FileName, FileDate.length() + 1);
+
+		LogFile = SD.open(FileName, FILE_WRITE);
         if ((LogFile))
         {
+		  // 74byte / 10 seconds
           LogFile.println(GPS.lastNMEA());  // write to sd card
           LogFile.close();
         }
+		delete[] FileName;
     }
   }
 
